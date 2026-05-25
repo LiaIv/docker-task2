@@ -46,4 +46,58 @@ npm run preview
 * `src/main.js` — логика приложения
 * `src/style.css` — стили
 * `dist/` — результат сборки (генерируется)
-# frontend-static
+
+---
+
+## Запуск в Docker (ДЗ-2: «Основы контейнеризации»)
+
+Проект содержит `Dockerfile` (multi-stage build) и `.dockerignore`.
+
+### Сборка образа
+
+```bash
+docker build -t ruzaliasib/frontend:1.0.0 -t ruzaliasib/frontend:latest .
+```
+
+### Запуск контейнера
+
+```bash
+docker run --rm -p 8080:80 ruzaliasib/frontend:1.0.0
+```
+
+Открой в браузере: `http://localhost:8080` или проверь через `curl`:
+
+```bash
+curl -i http://localhost:8080
+```
+
+### Размер образа
+
+```bash
+docker images ruzaliasib/frontend
+```
+
+Получено:
+
+| TAG    | DISK USAGE | CONTENT SIZE |
+|--------|------------|--------------|
+| 1.0.0  | 75.9 MB    | 21.8 MB      |
+| latest | 75.9 MB    | 21.8 MB      |
+
+### Что внутри Dockerfile
+
+- **Stage 1 (`builder`)** — `node:20-alpine`: ставит зависимости через `npm ci`
+  и собирает статику командой `npm run build`.
+- **Stage 2 (`runtime`)** — `nginx:1.27-alpine`: получает только содержимое
+  `dist/` и раздаёт его на порту 80. Node.js и `node_modules` в финальный
+  образ не попадают.
+
+Best practices, использованные в Dockerfile:
+- multi-stage build → лёгкий runtime-образ;
+- сначала копируются `package.json` / `package-lock.json` → потом `npm ci` →
+  только потом исходники (корректное кэширование слоёв);
+- `npm ci` вместо `npm install` (детерминированная сборка);
+- фиксированные теги базовых образов (`node:20-alpine`, `nginx:1.27-alpine`);
+- открыт только нужный порт (`EXPOSE 80`);
+- контекст сборки минимизирован через `.dockerignore`.
+
